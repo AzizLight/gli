@@ -14,6 +14,7 @@ module GLI
       OptionParsingResult.new.tap { |parsing_result|
         parsing_result.arguments = args
         parsing_result = @global_option_parser.parse!(parsing_result)
+        parsing_result.cli_options = @global_option_parser.cli_options
         option_parser_class.new(@accepts).parse!(parsing_result)
       }
     end
@@ -21,6 +22,8 @@ module GLI
   private
 
     class GlobalOptionParser
+      attr_reader :cli_options
+
       def initialize(option_parser_factory,command_finder)
         @option_parser_factory = option_parser_factory
         @command_finder        = command_finder
@@ -28,6 +31,7 @@ module GLI
 
       def parse!(parsing_result)
         parsing_result.arguments      = GLIOptionBlockParser.new(@option_parser_factory,UnknownGlobalArgument).parse!(parsing_result.arguments)
+        @cli_options = { :global => @option_parser_factory.options_hash.dup, "commands" => {} }
         parsing_result.global_options = @option_parser_factory.options_hash_with_defaults_set!
         command_name = if parsing_result.global_options[:help]
                          "help"
@@ -40,6 +44,8 @@ module GLI
     end
 
     class NormalCommandOptionParser
+      attr_accessor :cli_options
+
       def initialize(accepts)
         @accepts = accepts
       end
@@ -63,6 +69,7 @@ module GLI
 
           arguments = option_block_parser.parse!(arguments)
 
+          parsing_result.cli_options["commands"][command.name] = option_parser_factory.options_hash.dup
           parsed_command_options[command] = option_parser_factory.options_hash_with_defaults_set!
           command_finder                  = CommandFinder.new(command.commands,command.get_default_command)
           next_command_name               = arguments.shift
@@ -111,6 +118,7 @@ module GLI
         option_block_parser.command = command
 
         parsing_result.arguments       = option_block_parser.parse!(parsing_result.arguments)
+        parsing_result.cli_options["commands"][command.name] = option_parser_factory.options_hash.dup
         parsing_result.command_options = option_parser_factory.options_hash_with_defaults_set!
 
         subcommand,args                = find_subcommand(command,parsing_result.arguments)

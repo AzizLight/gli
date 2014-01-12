@@ -81,6 +81,36 @@ class TC_testGLI < Clean::Test::TestCase
     assert_raises(ArgumentError) { @app.command ['f','some command'] }
   end
 
+  def test_command_line_stored_separately
+    failure = nil
+    @app.reset
+    @app.flag :f
+    @app.switch :s
+    @app.flag :g
+    @app.switch :bleorgh
+    called = false
+    @app.command :command do |c|
+      c.flag :f
+      c.switch :s
+      c.flag :g
+      c.action do |g,o,a|
+        begin
+          called = true
+          assert_equal "bar",g[:cli][:f]
+          assert !g[:cli][:bleorgh]
+          assert_equal "baaz",o[:cli][:g]
+        rescue Exception => ex
+          failure = ex
+        end
+      end
+    end
+    assert_equal 0,@app.run(%w(-f bar --no-bleorgh command -g baaz)),@fake_stderr.to_s
+    assert_equal "bar",@app.options[:global][:f]
+    assert !@app.options[:global][:bleorgh]
+    assert called
+    raise failure if !failure.nil?
+  end
+
   def test_init_from_config
     failure = nil
     @app.reset

@@ -71,6 +71,11 @@ module GLI
                                                 self.subcommand_option_handling_strategy)
 
         parsing_result = gli_option_parser.parse_options(args)
+
+        self.options = parsing_result.cli_options
+        parsing_result.global_options[:cli]  = self.options[:global]
+        parsing_result.command_options[:cli] = self.options["commands"][parsing_result.command.name]
+
         parsing_result.convert_to_openstruct! if @use_openstruct
 
         the_command = parsing_result.command
@@ -201,7 +206,41 @@ module GLI
       @subcommand_option_handling_strategy || :legacy
     end
 
+    # Sets the @options instance variable if it doesn't exist
+    # and returns it. The @options instance variable contains
+    # the options passed by the user on the command line.
+    def options #:nodoc:
+      @options ||= { :global => {}, "commands" => {} }
+    end
+
+    # Sets the @options instance variable, which contains the
+    # options passed by the user on the command line.
+    # If the opts parameter doesn't have the correct format,
+    # the instance variable will be set with the correct format
+    # but the command line options will not be added to it.
+    # If the GLI Debug mode is enabled, an ArguementError exception
+    # will be raised.
+    def options=(opts)
+      if valid_options_hash_format_for?(opts)
+        @options = opts
+      else
+        if ENV['GLI_DEBUG'] == 'true'
+          raise ArgumentError, "The options hash is invalid"
+        end
+
+        @options = { :global => {}, "commands" => {} }
+      end
+    end
+
   private
+
+    def valid_options_hash_format_for?(opts)
+      valid_options_hash  = opts.is_a?(Hash)
+      valid_global_hash   = opts.has_key?(:global) && opts.fetch(:global).is_a?(Hash)
+      valid_commands_hash = opts.has_key?("commands") && opts.fetch("commands").is_a?(Hash)
+
+      valid_options_hash && valid_global_hash && valid_commands_hash
+    end
 
     def handle_exception(ex,command)
       if regular_error_handling?(ex)

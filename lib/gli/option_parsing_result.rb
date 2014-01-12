@@ -5,6 +5,8 @@ module GLI
     attr_accessor :command_options
     attr_accessor :arguments
 
+    attr_accessor :cli_options
+
     def convert_to_openstruct!
       @global_options  = Options.new(@global_options)
       @command_options = Options.new(@command_options)

@@ -200,6 +200,7 @@ class TC_testSubCommand < Clean::Test::TestCase
       global_options = options[:global_options] || { :help => false }
       @run_results.each do |command,results|
         if command == expected_command
+          results.map! { |r| r.reject { |k, v| k == :cli } }
           assert_equal(indifferent_hash(global_options),results[0])
           assert_equal(indifferent_hash(options[:command_options]),results[1])
           assert_equal(options[:args],results[2])
